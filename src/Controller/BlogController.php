@@ -5,6 +5,7 @@ use App\Entity\Comment;
 use App\Entity\Post;
 use App\Form\CommentType;
 use App\Form\PostType;
+use App\Uploader\UploaderInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -73,7 +74,7 @@ class BlogController extends AbstractController
      * @param Request $request
      * @return Response
      */
-    public function create(Request $request, SluggerInterface $slugger, string $uploadsAbsoluteDir, string $uploadsRelativeDir): Response
+    public function create(Request $request, UploaderInterface $uploader): Response
     {
         $post = new Post();
 
@@ -85,16 +86,7 @@ class BlogController extends AbstractController
             /** @var UploadedFIle $file */
             $file = $form->get("file")->getData();
 
-            $filename = sprintf(
-                "%s_%s.%s",
-                $slugger->slug($file->getClientOriginalName()),
-                uniqid(),
-                $file->getClientOriginalExtension()
-            );
-            
-            $file->move($uploadsAbsoluteDir, $filename);
-
-            $post->setImage($uploadsRelativeDir . "/" . $filename);
+            $post->setImage($uploader->upload($file));
 
             $this->getDoctrine()->getManager()->persist($post);
             $this->getDoctrine()->getManager()->flush();
@@ -112,7 +104,7 @@ class BlogController extends AbstractController
      * @param Post $post
      * @return Response
      */
-    public function update(Request $request, Post $post, SluggerInterface $slugger, string $uploadsAbsoluteDir, string $uploadsRelativeDir): Response
+    public function update(Request $request, Post $post, UploaderInterface $uploader): Response
     {
         $form = $this->createForm(PostType::class, $post)->handleRequest($request);
 
@@ -121,16 +113,7 @@ class BlogController extends AbstractController
              $file = $form->get("file")->getData();
 
              if ($file !== null){
-                $filename = sprintf(
-                    "%s_%s.%s",
-                    $slugger->slug($file->getClientOriginalName()),
-                    uniqid(),
-                    $file->getClientOriginalExtension()
-                );
-                
-                $file->move($uploadsAbsoluteDir, $filename);
-    
-                $post->setImage($uploadsRelativeDir . "/" . $filename);
+                $post->setImage($uploader->upload($file));
              }
              
             $this->getDoctrine()->getManager()->flush();
